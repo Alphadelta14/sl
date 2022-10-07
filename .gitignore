@@ -1,1 +1,8 @@
 /sl
+*.deb
+debian/sl
+.debhelper
+debian/files
+*.substvars
+debhelper-build-stamp
+*.log

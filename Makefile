@@ -10,6 +10,7 @@
 
 SL_VERSION = 5.1
 DEB_ARCH = amd64
+DEB_FILENAME = sl_$(SL_VERSION)-1_$(DEB_ARCH).deb
 
 INSTALL = install
 PREFIX = /usr
@@ -41,6 +42,15 @@ docker-build-deb: docker-build
 		make deb
 .PHONY: docker-build-deb
 
+docker-build-test: docker-build
+	docker run --rm \
+		-v "$$PWD:/opt/src/sl-$(SL_VERSION)" \
+		--workdir "/opt/src/sl-$(SL_VERSION)" \
+		--tty \
+		$(DOCKER_IMAGE) \
+		make root-test
+.PHONY: docker-build-test
+
 sl: sl.c sl.h
 	$(CC) $(CFLAGS) -o sl sl.c -lncurses
 
@@ -54,11 +64,20 @@ clean:
 	dh_clean
 .PHONY: clean
 
-sl_$(SL_VERSION)-1_$(DEB_ARCH).deb:
+$(DEB_FILENAME):
 	dh build
 	$(FAKEROOT) dh binary
 
-deb: sl_$(SL_VERSION)-1_$(DEB_ARCH).deb
+root-test:
+	# check if running as root
+	test "$$(id -u)" -eq 0
+	dpkg -i "$(DEB_FILENAME)"
+	# Ensure docker is running with a pseudo tty (-t/--tty)
+	test -t 1
+	sl
+.PHONY: root-test
+
+deb: $(DEB_FILENAME)
 .PHONY: deb
 
 distclean: clean

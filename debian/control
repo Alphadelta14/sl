@@ -1,0 +1,16 @@
+Source: sl
+Section: unknown
+Priority: optional
+Maintainer: Alpha <alpha@alphaservcomputing.solutions>
+Build-Depends: debhelper (>= 11), libncurses-dev
+Standards-Version: 4.1.3
+Homepage: https://github.com/Alphadelta14/sl
+Vcs-Browser: https://github.com/Alphadelta14/sl
+Vcs-Git: https://github.com/Alphadelta14/sl
+
+Package: sl
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description:
+  SL (Steam Locomotive) runs across your terminal when you type "sl" as you meant to type "ls".
+  It's just a joke command, and not useful at all.

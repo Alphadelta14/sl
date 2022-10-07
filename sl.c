@@ -40,6 +40,7 @@
 
 #include <curses.h>
 #include <signal.h>
+#include <stdio.h>
 #include <unistd.h>
 #include "sl.h"
 
@@ -55,6 +56,7 @@ int ACCIDENT  = 0;
 int LOGO      = 0;
 int FLY       = 0;
 int C51       = 0;
+int HELP      = 0;
 
 int my_mvaddstr(int y, int x, char *str)
 {
@@ -75,7 +77,8 @@ void option(char *str)
             case 'F': FLY      = 1; break;
             case 'l': LOGO     = 1; break;
             case 'c': C51      = 1; break;
-            default:                break;
+            case '-':               break;
+            default:  HELP     = 1;  break;
         }
     }
 }
@@ -88,6 +91,10 @@ int main(int argc, char *argv[])
         if (*argv[i] == '-') {
             option(argv[i] + 1);
         }
+    }
+    if (HELP == 1) {
+        printf("Usage: sl [-asFlc]\n");
+        return 1;
     }
     initscr();
     signal(SIGINT, SIG_IGN);

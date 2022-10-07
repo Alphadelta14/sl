@@ -6,3 +6,9 @@ debian/files
 *.substvars
 debhelper-build-stamp
 *.log
+
+*.pyc
+__pycache__
+build
+dist
+*.egg-info

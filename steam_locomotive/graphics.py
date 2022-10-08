@@ -2,17 +2,35 @@
 
 import contextlib
 import curses
+import enum
 import typing
 
 # shamelessly stole the character derivation from
 # https://levelup.gitconnected.com/how-to-convert-an-image-to-ascii-art-with-python-in-5-steps-efbac8996d5e
 # to avoid building my own image kernels
 ASCII_COV = " `^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
-CONV_FACTOR = len(ASCII_COV) / 256.0 / 3
+
+#: List of tuples of (color, character)
+#: Color may be a grayscale value (0-255) or a palette index
+#: Character is the ascii char to show
+FrameRowType = typing.List[typing.Tuple[int, int]]
+FrameType = typing.List[FrameRowType]
+PaletteType = typing.List[int]
+
+
+class Coloring(enum.Enum):
+    GRAYSCALE = "grayscale"
+    COLORED_MAX = "colored"
+    CURSES_MIN = "curses"
 
 
 @contextlib.contextmanager
 def curses_context():
+    """Enter a curses session.
+
+    After this context manager quits (even by error), the session will
+    be cleaned up.
+    """
     window = curses.initscr()
     try:
         curses.noecho()
@@ -27,31 +45,39 @@ def curses_context():
         curses.endwin()
 
 
-def get_curses_palette():
+def get_curses_palette() -> PaletteType:
     """Get a curses 8-color palette."""
     with curses_context():
         palette = []
         for color_id in range(64):
             red, green, blue = curses.color_content(color_id)
-            palette += [int(red * 255 / 1000), int(blue * 255 / 1000), int(green * 255 / 1000)]
+            palette += [int(red * 255 / 1000), int(green * 255 / 1000), int(blue * 255 / 1000)]
     return palette
 
 
-def row_to_curses(row: typing.List[int], palette: typing.List[int]) -> str:
+def row_to_curses(row: typing.List[int], palette: typing.Optional[PaletteType]) -> FrameRowType:
     """Convert a row of an image to an ASCII string.
 
     Parameters
     ----------
-    row: typing.List[typing.Tuple[int, int, int]]
-        pixel buffer data (1d * RGB)
+    row: typing.List[typing.Tuple[int]]
+        pixel buffer data (1d * pal_idx)
+    palette: typing.Optional[PaletteType]
+        optional RGB palette information
 
     Returns
     -------
     ascii_str: str
     """
+    conv_factor = len(ASCII_COV) / 256.0
+    if palette:
+        conv_factor /= 3
     curses_data = []
-    for color in row:
-        brightness = sum(palette[color*3:color*3+3])  # r+g+b
-        weight = ASCII_COV[int(brightness * CONV_FACTOR)]
-        curses_data.append((color, weight))
+    for value in row:
+        if palette:
+            brightness = sum(palette[value*3:value*3+3])  # r+g+b
+        else:
+            brightness = value
+        weight = ASCII_COV[int(brightness * conv_factor)]
+        curses_data.append((value, weight))
     return curses_data

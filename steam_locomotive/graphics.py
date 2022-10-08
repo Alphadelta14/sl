@@ -44,6 +44,18 @@ def curses_context():
         curses.endwin()
 
 
+def has_curses() -> bool:
+    """Check if curses can be initialized.
+
+    This may not be possible if there is no terminal, for example.
+    """
+    try:
+        with curses_context():
+            return True
+    except curses.error:
+        return False
+
+
 def get_curses_palette() -> PaletteType:
     """Get a curses 8-color palette."""
     with curses_context():

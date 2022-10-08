@@ -1,3 +1,7 @@
+"""Handle trains.
+
+Main entrypoint is in .cli.
+"""
 from __future__ import annotations
 
 import curses

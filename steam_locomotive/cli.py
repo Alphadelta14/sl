@@ -1,3 +1,4 @@
+"""Main CLI entrypoint for `sl`."""
 from __future__ import annotations
 
 import argparse

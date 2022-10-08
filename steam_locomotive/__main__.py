@@ -1,3 +1,4 @@
+"""Support `python -m steam_locomotive` invocation."""
 import sys
 
 from .cli import main

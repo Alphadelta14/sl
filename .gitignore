@@ -1,7 +1,9 @@
 /sl
 *.deb
 debian/sl
+debian/python3-sl
 .debhelper
+.pybuild
 debian/files
 *.substvars
 debhelper-build-stamp

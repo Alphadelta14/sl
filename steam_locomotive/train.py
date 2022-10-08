@@ -2,14 +2,23 @@ from __future__ import annotations
 
 import curses
 import itertools
+import logging
+import pathlib
+import random
 import time
 import typing
 
 # NB: bullseye uses Pillow 8.1.2
 from PIL import Image, ImageEnhance
+try:
+    from PIL import GifImagePlugin
+except ImportError:
+    GifImagePlugin = None
 
-from .graphics import curses_context, row_to_curses, get_curses_palette
+from .graphics import curses_context, row_to_curses
 from . import graphics
+from .options import TrainOptions
+from . import data as data_package
 
 MAX_COLUMNS = 100
 MAX_ROWS = 40
@@ -32,13 +41,31 @@ class Train:
         self.frame_speed = 0.1
 
     @classmethod
-    def from_gif(cls, handle: file, colored=graphics.Coloring.GRAYSCALE):
+    def select_train(cls, options: TrainOptions) -> Train:
+        """Get a selected train based on options passed to command line.
+
+        Returns
+        -------
+        train: Train
+        """
+        if options.gif:
+            filename = options.gif
+        else:
+            filenames = sorted(pathlib.Path(data_package.__file__).parent.glob("*.gif"))
+            if options.number == -1:
+                filename = random.choice(filenames)
+            else:
+                filename = filenames[options.number % len(filenames)]
+        return cls.from_gif(filename, options.colored)
+
+    @classmethod
+    def from_gif(cls, handle: typing.Union[file, str, pathlib.Path], colored=graphics.Coloring.GRAYSCALE) -> Train:
         """Create a Train from a file handle.
 
         Parameters
         ----------
-        handle: file
-            GIF handle to load from
+        handle: typing.Union[str, file]
+            GIF handle or filename to load from
         colored: graphics.Coloring
             Palette mode to generate
 
@@ -46,7 +73,9 @@ class Train:
         -------
         train: Train
         """
-        img = Image.open(handle, formats=["gif", "apng"])
+        if GifImagePlugin is None:
+            raise ValueError("Missing GIF support")
+        img = Image.open(handle, formats=["GIF"])
         if not getattr(img, "is_animated", False):
             raise ValueError(f"Expected {img} to be animated")
 
@@ -55,17 +84,25 @@ class Train:
         contraster = ImageEnhance.Contrast(sample)
         sample = contraster.enhance(2.5)
         sample_palette = None
+        if colored == graphics.Coloring.COLORED_MAX:
+            if graphics.supports_color_changing():
+                sample = sample.quantize(colors=64)
+                palette = sample.getpalette()
+                sample_palette = Image.new("P", (16, 16))
+                sample_palette.putpalette(palette)
+            else:
+                logging.warning("Can't change colors, falling back to grayscale")
+                colored = graphics.Coloring.GRAYSCALE
+        elif colored == graphics.Coloring.CURSES_MIN:
+            if graphics.supports_color_changing():
+                palette = graphics.get_curses_palette()
+                sample_palette = Image.new("P", (16, 16))
+                sample_palette.putpalette(palette)
+            else:
+                logging.warning("Can't change colors, falling back to grayscale")
+                colored = graphics.Coloring.GRAYSCALE
         if colored == graphics.Coloring.GRAYSCALE:
             palette = None
-        elif colored == graphics.Coloring.CURSES_MIN:
-            palette = get_curses_palette()
-            sample_palette = Image.new("P", (16, 16))
-            sample_palette.putpalette(palette)
-        elif colored == graphics.Coloring.COLORED_MAX:
-            sample = sample.quantize(colors=64)
-            palette = sample.getpalette()
-            sample_palette = Image.new("P", (16, 16))
-            sample_palette.putpalette(palette)
         # FIXME: Also handle that chars are already 1/2wide
         aspect_ratio = min(MAX_COLUMNS / img.size[0], MAX_ROWS / img.size[1])
         new_width = int(aspect_ratio*img.size[0])
@@ -114,7 +151,10 @@ class Train:
                 for pal_pos in range(0, len(self.palette), 3):
                     color_id = pal_pos // 3
                     red, green, blue = self.palette[pal_pos:pal_pos+3]
-                    curses.init_color(color_id, int(red*1000/255), int(green*1000/255), int(blue*1000/255))
+                    try:
+                        curses.init_color(color_id, int(red*1000/255), int(green*1000/255), int(blue*1000/255))
+                    except curses.error:
+                        raise ValueError(f"Couldn't initialize color {color_id} ({red}, {green}, {blue})")
                     # NB: pair_id=0 is reserved and errors if used
                     curses.init_pair(color_id+1, color_id, 0)
             frame: graphics.FrameType

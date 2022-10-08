@@ -33,13 +33,12 @@ def curses_context():
     """
     window = curses.initscr()
     try:
+        curses.start_color()
         curses.noecho()
         curses.curs_set(0)
         window.nodelay(True)
         window.leaveok(True)
         window.scrollok(False)
-        if curses.has_colors():
-            curses.start_color()
         yield window
     finally:
         curses.endwin()
@@ -49,10 +48,16 @@ def get_curses_palette() -> PaletteType:
     """Get a curses 8-color palette."""
     with curses_context():
         palette = []
-        for color_id in range(64):
+        for color_id in range(8):
             red, green, blue = curses.color_content(color_id)
             palette += [int(red * 255 / 1000), int(green * 255 / 1000), int(blue * 255 / 1000)]
     return palette
+
+
+def supports_color_changing() -> bool:
+    """Check if term can change colors."""
+    with curses_context():
+        return curses.can_change_color()
 
 
 def row_to_curses(row: typing.List[int], palette: typing.Optional[PaletteType]) -> FrameRowType:

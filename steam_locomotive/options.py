@@ -10,15 +10,9 @@ class TrainOptions:
     """
 
     # Setup slots to ensure state is fairly consistent between structures.
-    __slots__ = ("flying", "accident", "little", "number", "gif", "colored")
+    __slots__ = ("number", "gif", "colored")
 
     def __init__(self):
-        #: Fly off the screen
-        self.flying: bool = False
-        #: People cry out for help
-        self.accident: bool = False
-        #: Little train
-        self.little: bool = False
         #: Selected train. -1 to use random
         self.number: int = -1
         #: Path to gif to use

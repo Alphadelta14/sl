@@ -21,15 +21,6 @@ def main(argv: typing.Optional[typing.List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="sl")
     # NB: These are set on a TrainOptions instance
     parser.add_argument(
-        "-F", dest="flying", help="Fly off the screen", action="store_true"
-    )
-    parser.add_argument(
-        "-a", dest="accident", help="People cry out for help", action="store_true"
-    )
-    parser.add_argument(
-        "-l", dest="little", help="Show a little train", action="store_true"
-    )
-    parser.add_argument(
         "-n", dest="number", help="Select which train to use (default random)", type=int
     )
     parser.add_argument(

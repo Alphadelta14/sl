@@ -2,7 +2,7 @@
 *.deb
 debian/sl
 debian/python3-sl
-.debhelper
+*.debhelper
 .pybuild
 debian/files
 *.substvars

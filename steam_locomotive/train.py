@@ -10,15 +10,11 @@ import typing
 
 # NB: bullseye uses Pillow 8.1.2
 from PIL import Image, ImageEnhance
-try:
-    from PIL import GifImagePlugin
-except ImportError:
-    GifImagePlugin = None
 
-from .graphics import curses_context, row_to_curses
-from . import graphics
-from .options import TrainOptions
 from . import data as data_package
+from . import graphics
+from .graphics import curses_context, row_to_curses
+from .options import TrainOptions
 
 MAX_COLUMNS = 100
 MAX_ROWS = 40
@@ -32,7 +28,12 @@ class Train:
 
     Use Train.from_file() to create one from a GIF.
     """
-    def __init__(self, frame_gen: typing.Iterable[graphics.FrameType], palette: typing.Optional[graphics.PaletteType] = None):
+
+    def __init__(
+        self,
+        frame_gen: typing.Iterable[graphics.FrameType],
+        palette: typing.Optional[graphics.PaletteType] = None,
+    ):
         #: Iterator for frame generation
         self.frame_gen = frame_gen
         #: Optional color palette
@@ -49,7 +50,7 @@ class Train:
         train: Train
         """
         if options.gif:
-            filename = options.gif
+            filename = pathlib.Path(options.gif)
         else:
             filenames = sorted(pathlib.Path(data_package.__file__).parent.glob("*.gif"))
             if options.number == -1:
@@ -59,12 +60,16 @@ class Train:
         return cls.from_gif(filename, options.colored)
 
     @classmethod
-    def from_gif(cls, handle: typing.Union[file, str, pathlib.Path], colored=graphics.Coloring.GRAYSCALE) -> Train:
+    def from_gif(
+        cls,
+        handle: typing.Union[str, pathlib.Path],
+        colored=graphics.Coloring.GRAYSCALE,
+    ) -> Train:
         """Create a Train from a file handle.
 
         Parameters
         ----------
-        handle: typing.Union[str, file]
+        handle: typing.Union[str, pathlib.Path]
             GIF handle or filename to load from
         colored: graphics.Coloring
             Palette mode to generate
@@ -73,8 +78,6 @@ class Train:
         -------
         train: Train
         """
-        if GifImagePlugin is None:
-            raise ValueError("Missing GIF support")
         img = Image.open(handle, formats=["GIF"])
         if not getattr(img, "is_animated", False):
             raise ValueError(f"Expected {img} to be animated")
@@ -88,6 +91,7 @@ class Train:
             if graphics.supports_color_changing():
                 sample = sample.quantize(colors=64)
                 palette = sample.getpalette()
+                assert palette
                 sample_palette = Image.new("P", (16, 16))
                 sample_palette.putpalette(palette)
             else:
@@ -105,8 +109,8 @@ class Train:
             palette = None
         # FIXME: Also handle that chars are already 1/2wide
         aspect_ratio = min(MAX_COLUMNS / img.size[0], MAX_ROWS / img.size[1])
-        new_width = int(aspect_ratio*img.size[0])
-        new_height = int(aspect_ratio*img.size[1])
+        new_width = int(aspect_ratio * img.size[0])
+        new_height = int(aspect_ratio * img.size[1])
 
         def frame_gen() -> typing.Iterator[graphics.FrameType]:
             """Iterate through frames.
@@ -134,7 +138,9 @@ class Train:
                 iter_data = iter(frame.getdata())
                 ascii_frame = []
                 for row_id in range(new_height):
-                    row = row_to_curses(itertools.islice(iter_data, new_width), local_palette)
+                    row = row_to_curses(
+                        itertools.islice(iter_data, new_width), local_palette
+                    )
                     ascii_frame.append(row)
                 yield ascii_frame
 
@@ -150,13 +156,20 @@ class Train:
             if self.palette:
                 for pal_pos in range(0, len(self.palette), 3):
                     color_id = pal_pos // 3
-                    red, green, blue = self.palette[pal_pos:pal_pos+3]
+                    red, green, blue = self.palette[pal_pos : pal_pos + 3]
                     try:
-                        curses.init_color(color_id, int(red*1000/255), int(green*1000/255), int(blue*1000/255))
+                        curses.init_color(
+                            color_id,
+                            int(red * 1000 / 255),
+                            int(green * 1000 / 255),
+                            int(blue * 1000 / 255),
+                        )
                     except curses.error:
-                        raise ValueError(f"Couldn't initialize color {color_id} ({red}, {green}, {blue})")
+                        raise ValueError(
+                            f"Couldn't initialize color {color_id} ({red}, {green}, {blue})"
+                        )
                     # NB: pair_id=0 is reserved and errors if used
-                    curses.init_pair(color_id+1, color_id, 0)
+                    curses.init_pair(color_id + 1, color_id, 0)
             frame: graphics.FrameType
             row: graphics.FrameRowType
             for frame in self.frame_gen:
@@ -165,7 +178,9 @@ class Train:
                         color, weight = data
                         if self.palette:
                             # our pair_id is just one higher than our palette idx
-                            window.addch(row_id, col_id, weight, curses.color_pair(color+1))
+                            window.addch(
+                                row_id, col_id, weight, curses.color_pair(color + 1)
+                            )
                         else:
                             window.addch(row_id, col_id, weight)
                 window.getch()

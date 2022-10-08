@@ -12,6 +12,8 @@
 SL_VERSION = $(shell grep "^version =" setup.cfg | awk '{print $$3}')
 DEB_ARCH = amd64
 DEB_FILENAME = python3-sl_$(SL_VERSION)-1_$(DEB_ARCH).deb
+WHEEL_FILENAME = sl-$(SL_VERSION)-py3-none-any.whl
+SDIST_FILENAME = sl-$(SL_VERSION).tar.gz
 
 # Autotools compat
 PREFIX = /usr
@@ -36,8 +38,11 @@ build: build-py
 build-c: sl
 .PHONY: build-c
 
-build-py-sdist: dist/sl-$(SL_VERSION).tar.gz
+build-py-sdist: dist/$(SDIST_FILENAME)
 .PHONY: build-py-sdist
+
+build-py-wheel: dist/$(WHEEL_FILENAME)
+.PHONY: build-py-wheel
 
 install: install-py
 .PHONY: install
@@ -57,6 +62,16 @@ docker-build-deb: docker-build
 		make deb
 .PHONY: docker-build-deb
 
+# Build a wheel in our dist directory using our docker image
+docker-build-wheel: docker-build
+	docker run --rm \
+		-v "$$PWD:/opt/src/sl-$(SL_VERSION)" \
+		--workdir "/opt/src/sl-$(SL_VERSION)" \
+		--user "$$(id -u):$$(id -g)" \
+		$(DOCKER_IMAGE) \
+		make build-py-wheel
+.PHONY: docker-build-wheel
+
 # Install our deb into a docker image and run it
 docker-build-test: docker-build
 	docker run --rm \
@@ -74,8 +89,13 @@ build-py:
 	python3 setup.py build
 .PHONY: build-py
 
-dist/sl-$(SL_VERSION).tar.gz:
+dist/$(SDIST_FILENAME):
 	python3 setup.py sdist
+	test -f "$@"
+
+dist/$(WHEEL_FILENAME):
+	python3 setup.py bdist_wheel
+	test -f "$@"
 
 # Install sl into our $PREFIX/bin so it can be invoked in $PATH
 install-c:
@@ -98,6 +118,7 @@ clean:
 $(DEB_FILENAME):
 	dh build --with python3 --buildsystem=pybuild
 	$(FAKEROOT) dh binary --with python3 --buildsystem=pybuild
+	test -f "$@"
 
 # Make `make deb` generate our deb
 deb: $(DEB_FILENAME)

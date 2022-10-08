@@ -8,6 +8,7 @@ class TrainOptions:
 
     These are populated in cli.main.
     """
+
     # Setup slots to ensure state is fairly consistent between structures.
     __slots__ = ("flying", "accident", "little", "number", "gif", "colored")
 
